@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duka Zoom — Sales Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F5F7F1; --ink:#16231C; --ink-soft:#4E5B52;
+    --teal:#0F766E; --teal-dark:#0B5C56; --amber:#F2A93B; --coral:#E2543F;
+    --card:#FFFFFF; --line:#DCE3D8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--ink); font-family:'Inter', sans-serif; line-height:1.5;}
+  button, select, input{font-family:inherit;}
+  button{cursor:pointer;}
+  .hidden{display:none !important;}
+
+  /* ---------- LOGIN ---------- */
+  #login-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;}
+  .login-card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:32px 28px; width:100%; max-width:360px; text-align:center;
+  }
+  .login-card .logo{font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:22px; margin-bottom:6px;}
+  .login-card .sub{font-size:13px; color:var(--ink-soft); margin-bottom:22px;}
+  .login-card input{
+    width:100%; padding:13px; border:1px solid var(--line); border-radius:10px;
+    font-size:16px; text-align:center; margin-bottom:14px;
+  }
+  .login-card input:focus-visible{outline:3px solid var(--amber);}
+  .login-card button{
+    width:100%; background:var(--teal); color:#fff; border:none; border-radius:24px;
+    padding:13px; font-weight:700; font-size:15px;
+  }
+  .login-card button:hover{background:var(--teal-dark);}
+  .login-card button:disabled{opacity:.6; cursor:default;}
+  .login-error{color:var(--coral); font-size:13px; margin-top:10px; min-height:16px;}
+
+  /* ---------- HEADER ---------- */
+  header{
+    background:var(--teal); color:#fff; padding:14px 24px;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    position:sticky; top:0; z-index:20;
+  }
+  header .logo{font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:18px;}
+  header .updated{font-size:12px; opacity:.85; margin-top:2px;}
+  .header-actions{display:flex; gap:8px;}
+  .icon-btn{
+    background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:20px;
+    padding:8px 14px; font-size:13px; font-weight:600;
+  }
+  .icon-btn:hover{background:rgba(255,255,255,.28);}
+  .icon-btn:disabled{opacity:.6; cursor:default;}
+
+  main{max-width:1180px; margin:0 auto; padding:20px 24px 48px; display:flex; flex-direction:column; gap:18px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px;}
+
+  /* ---------- CONTROLS ---------- */
+  .controls{display:flex; flex-wrap:wrap; gap:16px 22px; align-items:flex-end;}
+  .ctrl{display:flex; flex-direction:column; gap:5px;}
+  .ctrl label{font-size:11.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.5px;}
+  .seg{display:flex; border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .seg button{
+    background:var(--card); border:none; border-right:1px solid var(--line);
+    padding:9px 14px; font-size:13px; font-weight:600; color:var(--ink-soft);
+  }
+  .seg button:last-child{border-right:none;}
+  .seg button.active{background:var(--teal); color:#fff;}
+  .ctrl select, .ctrl input{
+    padding:9px 12px; border:1px solid var(--line); border-radius:10px; font-size:13.5px;
+    background:var(--card); min-width:140px;
+  }
+  .ctrl input[type=number]{width:120px; min-width:0;}
+  .ctrl select:focus-visible, .ctrl input:focus-visible, .seg button:focus-visible{outline:3px solid var(--amber);}
+
+  /* ---------- KPIs ---------- */
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px;}
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px;}
+  .kpi-label{font-size:12px; font-weight:600; color:var(--ink-soft);}
+  .kpi-value{font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:26px; margin-top:4px; word-break:break-word;}
+  .kpi-sub{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+
+  /* ---------- CHARTS ---------- */
+  .charts{display:grid; grid-template-columns:1.6fr 1fr; gap:14px;}
+  .card h2{font-family:'Space Grotesk', sans-serif; font-size:16px;}
+  .card .card-sub{font-size:12.5px; color:var(--ink-soft); margin:2px 0 12px;}
+  .chart-box{position:relative; height:290px;}
+  .chart-msg{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:20px; color:var(--ink-soft); font-size:13.5px;
+  }
+
+  /* ---------- TABLE ---------- */
+  .table-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+  .btn-secondary{
+    background:var(--card); border:1px solid var(--line); border-radius:20px; padding:8px 14px;
+    font-size:12.5px; font-weight:600; color:var(--ink);
+  }
+  .btn-secondary:hover{background:var(--bg);}
+  .table-wrap{overflow-x:auto;}
+  table{width:100%; border-collapse:collapse; font-size:13.5px; min-width:820px;}
+  th{
+    text-align:left; font-size:11.5px; font-weight:700; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:.4px; padding:8px 10px; border-bottom:2px solid var(--line); white-space:nowrap;
+  }
+  td{padding:10px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  th.num, td.num{text-align:right;}
+  tbody tr{cursor:pointer;}
+  tbody tr:hover{background:#F3F6EF;}
+  tbody tr.sel{background:#EAF2E9;}
+  td.sku{font-weight:600; white-space:normal; min-width:170px;}
+  .badge{font-size:11px; font-weight:700; padding:3px 9px; border-radius:10px; white-space:nowrap;}
+  .badge.reorder{background:#FBDFD9; color:#a13a26;}
+  .badge.low{background:#FCE8CE; color:#8a5a12;}
+  .badge.ok{background:#DCEEE0; color:#1f6b3a;}
+  .badge.out{background:#2b352f; color:#fff;}
+  .badge.none{background:#E7E9E4; color:#5b665e;}
+  tbody tr.static{cursor:default;}
+  tbody tr.static:hover{background:none;}
+  .filter-note{
+    background:#FCE8CE; border:1px solid #E8B96A; color:#8a5a12; border-radius:12px;
+    padding:10px 14px; font-size:13px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .filter-note button{
+    background:none; border:1px solid #8a5a12; color:#8a5a12; border-radius:12px; padding:2px 10px; font-size:12px; font-weight:600;
+  }
+  .hint{font-size:12px; color:var(--ink-soft); margin-top:12px;}
+  .empty{padding:36px 10px; text-align:center; color:var(--ink-soft); font-size:14px; white-space:normal;}
+  .filter-chip{
+    display:inline-flex; align-items:center; gap:6px; background:#EAF2E9; border:1px solid var(--teal);
+    color:var(--teal-dark); border-radius:14px; padding:3px 10px; font-size:12px; font-weight:600; margin-left:8px;
+  }
+  .filter-chip button{background:none; border:none; color:inherit; font-size:13px; line-height:1; padding:0;}
+
+  @media (max-width:900px){
+    .charts{grid-template-columns:1fr;}
+  }
+  @media (max-width:560px){
+    header{padding:12px 16px;}
+    main{padding:16px 14px 40px;}
+    .seg button{padding:9px 10px; font-size:12.5px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo">📊 Duka Zoom</div>
+    <div class="sub">Sales dashboard — enter your dashboard key</div>
+    <input type="password" id="key-input" placeholder="Dashboard key" autocomplete="off">
+    <button id="key-submit">Open dashboard</button>
+    <p class="login-error" id="key-error"></p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="app" class="hidden">
+  <header>
+    <div>
+      <div class="logo">📊 Duka Zoom — Sales</div>
+      <div class="updated" id="updated-label"></div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="refresh-btn">🔄 Refresh</button>
+      <button class="icon-btn" id="logout-btn">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card controls">
+      <div class="ctrl">
+        <label>Group by</label>
+        <div class="seg" id="group-seg">
+          <button data-group="hour">Hourly</button>
+          <button data-group="day" class="active">Daily</button>
+          <button data-group="week">Weekly</button>
+          <button data-group="month">Monthly</button>
+          <button data-group="year">Yearly</button>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label for="range-select">Range</label>
+        <select id="range-select">
+          <option value="24h">Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d" selected>Last 30 days</option>
+          <option value="90d">Last 90 days</option>
+          <option value="12m">Last 12 months</option>
+          <option value="all">All time</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label for="product-select">Product</label>
+        <select id="product-select"><option value="">All products</option></select>
+      </div>
+      <div class="ctrl">
+        <label for="marketing-select">Sales from</label>
+        <select id="marketing-select"><option value="">All sales</option></select>
+      </div>
+      <div class="ctrl">
+        <label for="lead-input">Restock lead time (days)</label>
+        <input type="number" id="lead-input" min="0" step="1" value="3">
+      </div>
+      <div class="ctrl">
+        <label for="cover-input">Stock target (days of cover)</label>
+        <input type="number" id="cover-input" min="1" step="1" value="14">
+      </div>
+    </section>
+
+    <div class="filter-note hidden" id="filter-note"></div>
+    <section class="kpis" id="kpis"></section>
+
+    <section class="charts">
+      <div class="card">
+        <h2 id="trend-title">Units sold</h2>
+        <div class="card-sub" id="trend-sub"></div>
+        <div class="chart-box">
+          <canvas id="trend-canvas"></canvas>
+          <div class="chart-msg hidden" id="trend-msg"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Top 10 best sellers</h2>
+        <div class="card-sub">By units sold in the selected range. Click a bar to focus on that product.</div>
+        <div class="chart-box">
+          <canvas id="top-canvas"></canvas>
+          <div class="chart-msg hidden" id="top-msg"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="table-head">
+        <div>
+          <h2>Marketing: what each tool sold</h2>
+          <div class="card-sub" id="mkt-sub"></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Campaign</th>
+              <th>Type</th>
+              <th class="num">Orders</th>
+              <th class="num">Units</th>
+              <th class="num">Sales value</th>
+              <th class="num">Discount given</th>
+              <th class="num">Avg order value</th>
+              <th class="num">Share of orders</th>
+            </tr>
+          </thead>
+          <tbody id="mkt-body"></tbody>
+        </table>
+      </div>
+      <p class="hint">
+        Click a row to see which products that campaign sold: the charts and the product table above switch to it
+        (or use the "Sales from" box at the top). Promo codes are tracked automatically. To track anything else,
+        add <b>?src=</b> and a short name to your store link, for example
+        <b>https://xavieronyango57-star.github.io/Duka-zoom/?src=facebook</b>, and use a different name for each campaign.
+        Sales value excludes delivery fees. Tracking only covers orders placed since it was switched on.
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="table-head">
+        <div>
+          <h2>All products &amp; restock guide</h2>
+          <div class="card-sub" id="table-sub"></div>
+        </div>
+        <button class="btn-secondary" id="export-btn">⬇ Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table id="sku-table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Product</th>
+              <th class="num">Units sold</th>
+              <th class="num">Share</th>
+              <th class="num">Orders</th>
+              <th class="num">Avg / day (all sales)</th>
+              <th class="num">In stock</th>
+              <th class="num">Days of cover</th>
+              <th class="num">Suggested order</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="sku-body"></tbody>
+        </table>
+      </div>
+      <p class="hint">
+        Days of cover = current stock ÷ average units sold per day in the selected range. Suggested order brings stock up to your target days of cover.
+        Use a range of 30 days or more for stable numbers — a single busy day can make short ranges misleading.
+        When a "Sales from" filter is on, units, share and orders show only that campaign's sales, but days of cover and suggested orders still use all sales, because restocking has to cover every customer. Stock figures come from the Quantity column of your Stock tab, so products without a quantity there show "No stock data".
+      </p>
+    </section>
+  </main>
+</div>
+
+<script>
+  // =========================================================
+  // CONFIG — same webhook as the store and Riders App.
+  // The dashboard key is NOT stored here: you type it in on the
+  // login screen, and the script checks it on the server.
+  // =========================================================
+  const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw-OaVKDCtDG2TpuR873_XCwWtR86qjDQV9lfmwxMRjatBCPj_jgj-HMQi93vCoTxf9/exec';
+
+  const DEFAULT_RANGE = { hour: '24h', day: '30d', week: '90d', month: '12m', year: 'all' };
+  const GROUP_NOUN = { hour: 'hour', day: 'day', week: 'week', month: 'month', year: 'year' };
+  const MAX_BUCKETS = 500;
+  const DAY_MS = 86400000;
+
+  let dashboardKey = '';
+  let DATA = { orders: [], lines: [], stock: [] };
+  let lastComputed = null;
+  let lastUpdated = null;
+  let trendChart = null;
+  let topChart = null;
+  const nameByKey = new Map();
+  const state = { group: 'day', range: '30d', product: '', marketing: '', leadDays: 3, coverDays: 14 };
+
+  // ---------- helpers ----------
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  const fmtInt = (n) => Number(n || 0).toLocaleString();
+  const fmtMoney = (n) => 'KSh ' + Math.round(Number(n || 0)).toLocaleString();
+  const fmt1 = (n) => (Math.round(n * 10) / 10).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  const $ = (id) => document.getElementById(id);
+  const normPromo = (v) => String(v || '').trim().toUpperCase();
+  const normSrc = (v) => String(v || '').trim().toLowerCase();
+
+  function jsonpRequest(url, params){
+    return new Promise((resolve, reject) => {
+      const callbackName = 'jsonp_cb_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      const query = new URLSearchParams({ ...params, callback: callbackName }).toString();
+      const cleanup = () => { delete window[callbackName]; script.remove(); };
+      const timeout = setTimeout(() => { cleanup(); reject(new Error('Request timed out.')); }, 25000);
+      window[callbackName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
+      script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error('Could not reach the server.')); };
+      script.src = `${url}?${query}`;
+      document.body.appendChild(script);
+    });
+  }
+
+  // ---------- data ----------
+  function loadData(){
+    return jsonpRequest(SHEET_WEBHOOK_URL, { action: 'getSalesData', key: dashboardKey }).then((data) => {
+      if (data.status !== 'ok') throw new Error(data.message || 'Could not load sales data.');
+      DATA.orders = (data.orders || []).map((o) => ({ ...o, d: new Date(o.t), promo: normPromo(o.promo), src: normSrc(o.src) }));
+      DATA.lines = (data.lines || []).map((l) => ({ ...l, d: new Date(l.t), c: normPromo(l.c), s: normSrc(l.s) }));
+      DATA.stock = data.stock || [];
+      lastUpdated = new Date();
+    });
+  }
+
+  function populateProducts(){
+    nameByKey.clear();
+    DATA.lines.forEach((l) => { const k = l.p.toLowerCase(); if (!nameByKey.has(k)) nameByKey.set(k, l.p); });
+    DATA.stock.forEach((s) => { const k = s.name.toLowerCase(); if (!nameByKey.has(k)) nameByKey.set(k, s.name); });
+    const entries = [...nameByKey.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    $('product-select').innerHTML = '<option value="">All products</option>' +
+      entries.map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+    if (state.product && !nameByKey.has(state.product)) state.product = '';
+    $('product-select').value = state.product;
+  }
+
+  // ---------- marketing filter ----------
+  function populateMarketing(){
+    const promos = new Set();
+    const srcs = new Set();
+    DATA.orders.forEach((o) => { if (o.promo) promos.add(o.promo); if (o.src) srcs.add(o.src); });
+    const opts = ['<option value="">All sales</option>', '<option value="*">Any marketing tool</option>'];
+    if (promos.size) opts.push('<optgroup label="Promo codes">' + [...promos].sort().map((c) => `<option value="${esc('promo:' + c)}">${esc(c)}</option>`).join('') + '</optgroup>');
+    if (srcs.size) opts.push('<optgroup label="Campaign links">' + [...srcs].sort().map((c) => `<option value="${esc('src:' + c)}">${esc(c)}</option>`).join('') + '</optgroup>');
+    $('marketing-select').innerHTML = opts.join('');
+    const valid = state.marketing === '' || state.marketing === '*' ||
+      [...promos].some((c) => 'promo:' + c === state.marketing) || [...srcs].some((c) => 'src:' + c === state.marketing);
+    if (!valid) state.marketing = '';
+    $('marketing-select').value = state.marketing;
+  }
+
+  function matchesMarketing(promo, src){
+    const m = state.marketing;
+    if (!m) return true;
+    if (m === '*') return !!(promo || src);
+    if (m.indexOf('promo:') === 0) return promo === m.slice(6);
+    if (m.indexOf('src:') === 0) return src === m.slice(4);
+    return true;
+  }
+
+  function marketingLabel(){
+    const m = state.marketing;
+    if (!m) return '';
+    if (m === '*') return 'any marketing tool';
+    if (m.indexOf('promo:') === 0) return 'promo code ' + m.slice(6);
+    if (m.indexOf('src:') === 0) return 'link "' + m.slice(4) + '"';
+    return '';
+  }
+
+  // ---------- time buckets (local time, so hours match Nairobi on your device) ----------
+  function bucketStart(d, g){
+    const x = new Date(d);
+    if (g === 'hour') x.setMinutes(0, 0, 0);
+    else if (g === 'day') x.setHours(0, 0, 0, 0);
+    else if (g === 'week'){ x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); } // Monday
+    else if (g === 'month'){ x.setHours(0, 0, 0, 0); x.setDate(1); }
+    else { x.setHours(0, 0, 0, 0); x.setMonth(0, 1); }
+    return x;
+  }
+  function nextBucket(d, g){
+    const x = new Date(d);
+    if (g === 'hour') x.setHours(x.getHours() + 1);
+    else if (g === 'day') x.setDate(x.getDate() + 1);
+    else if (g === 'week') x.setDate(x.getDate() + 7);
+    else if (g === 'month') x.setMonth(x.getMonth() + 1);
+    else x.setFullYear(x.getFullYear() + 1);
+    return x;
+  }
+  function bucketLabel(d, g){
+    if (g === 'hour') return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '');
+    if (g === 'day' || g === 'week') return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    if (g === 'month') return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    return String(d.getFullYear());
+  }
+
+  function rangeStart(){
+    const now = new Date();
+    switch (state.range){
+      case '24h': return new Date(now.getTime() - DAY_MS);
+      case '7d':  return new Date(now.getTime() - 7 * DAY_MS);
+      case '30d': return new Date(now.getTime() - 30 * DAY_MS);
+      case '90d': return new Date(now.getTime() - 90 * DAY_MS);
+      case '12m': { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d; }
+      default: {
+        let min = null;
+        DATA.orders.forEach((o) => { if (!min || o.d < min) min = o.d; });
+        DATA.lines.forEach((l) => { if (!min || l.d < min) min = l.d; });
+        return min || new Date(now.getTime() - 30 * DAY_MS);
+      }
+    }
+  }
+
+  // ---------- numbers ----------
+  function statusFor(qty, rate){
+    if (qty === null || qty === undefined || isNaN(qty)) return { key: 'none', label: 'No stock data' };
+    if (qty <= 0) return { key: 'out', label: 'Out of stock' };
+    if (rate <= 0) return { key: 'ok', label: 'No recent sales' };
+    const cover = qty / rate;
+    if (cover <= state.leadDays) return { key: 'reorder', label: 'Reorder now' };
+    if (cover < state.coverDays) return { key: 'low', label: 'Running low' };
+    return { key: 'ok', label: 'OK' };
+  }
+
+  function compute(){
+    const start = rangeStart();
+    const end = new Date();
+    const days = Math.max((end - start) / DAY_MS, 1);
+    const rangeLines = DATA.lines.filter((l) => l.d >= start && l.d <= end);
+    const rangeOrders = DATA.orders.filter((o) => o.d >= start && o.d <= end);
+    // The marketing filter narrows what is counted as sold, but restock maths below keeps using ALL sales.
+    const lines = rangeLines.filter((l) => matchesMarketing(l.c, l.s));
+    const orders = rangeOrders.filter((o) => matchesMarketing(o.promo, o.src));
+
+    const stockMap = new Map();
+    DATA.stock.forEach((s) => stockMap.set(s.name.toLowerCase(), s));
+
+    const allUnits = new Map();
+    rangeLines.forEach((l) => {
+      const k = l.p.toLowerCase();
+      const e = allUnits.get(k) || { name: l.p, units: 0 };
+      e.units += l.q;
+      allUnits.set(k, e);
+    });
+
+    const bySku = new Map();
+    lines.forEach((l) => {
+      const k = l.p.toLowerCase();
+      let s = bySku.get(k);
+      if (!s){ s = { key: k, name: l.p, units: 0, orders: 0 }; bySku.set(k, s); }
+      s.units += l.q;
+      s.orders += 1; // one line = one product inside one order
+    });
+    allUnits.forEach((e, k) => { if (!bySku.has(k)) bySku.set(k, { key: k, name: e.name, units: 0, orders: 0 }); });
+    stockMap.forEach((s, k) => { if (!bySku.has(k)) bySku.set(k, { key: k, name: s.name, units: 0, orders: 0 }); });
+
+    const totalUnits = [...bySku.values()].reduce((a, s) => a + s.units, 0);
+    const rows = [...bySku.values()].map((s) => {
+      const st = stockMap.get(s.key);
+      const qty = st && st.quantity !== null && st.quantity !== undefined && !isNaN(st.quantity) ? Number(st.quantity) : null;
+      const rate = (allUnits.has(s.key) ? allUnits.get(s.key).units : 0) / days;
+      const cover = qty !== null && rate > 0 ? qty / rate : null;
+      const suggested = qty !== null ? Math.max(0, Math.ceil(rate * state.coverDays) - qty) : null;
+      return {
+        key: s.key, name: s.name, units: s.units, orders: s.orders,
+        share: totalUnits > 0 ? (s.units / totalUnits) * 100 : 0,
+        rate, qty, cover, suggested, status: statusFor(qty, rate)
+      };
+    }).sort((a, b) => b.units - a.units || a.name.localeCompare(b.name));
+
+    // trend (optionally for one product)
+    const trendLines = state.product ? lines.filter((l) => l.p.toLowerCase() === state.product) : lines;
+    const buckets = [];
+    const index = new Map();
+    let tooMany = false;
+    let cur = bucketStart(start, state.group);
+    while (cur <= end){
+      if (buckets.length >= MAX_BUCKETS){ tooMany = true; break; }
+      index.set(cur.getTime(), buckets.length);
+      buckets.push({ start: new Date(cur), units: 0 });
+      cur = nextBucket(cur, state.group);
+    }
+    if (!tooMany){
+      trendLines.forEach((l) => {
+        const i = index.get(bucketStart(l.d, state.group).getTime());
+        if (i !== undefined) buckets[i].units += l.q;
+      });
+    }
+
+    const salesValue = orders.reduce((a, o) => a + Math.max(0, (Number(o.total) || 0) - (Number(o.fee) || 0)), 0);
+    return { start, end, days, rows, buckets, tooMany, orders, salesValue, totalUnits, rangeOrders, rangeLines };
+  }
+
+  // ---------- render ----------
+  function kpi(label, value, sub){
+    return `<div class="kpi"><div class="kpi-label">${esc(label)}</div><div class="kpi-value">${value}</div>${sub ? `<div class="kpi-sub">${sub}</div>` : ''}</div>`;
+  }
+
+  function renderKpis(c){
+    const el = $('kpis');
+    if (state.product){
+      const r = c.rows.find((x) => x.key === state.product);
+      if (!r){ el.innerHTML = ''; return; }
+      el.innerHTML =
+        kpi('Units sold', fmtInt(r.units), esc(r.name)) +
+        kpi('Orders containing it', fmtInt(r.orders)) +
+        kpi(state.marketing ? 'Average per day (all sales)' : 'Average per day', fmt1(r.rate)) +
+        kpi('Days of cover', r.cover !== null ? fmt1(r.cover) : '—', r.qty !== null ? `${fmtInt(r.qty)} in stock · ${esc(r.status.label)}` : 'No stock data');
+    } else {
+      const best = c.rows[0] && c.rows[0].units > 0 ? c.rows[0] : null;
+      const needAction = c.rows.filter((r) => r.status.key === 'reorder' || r.status.key === 'out').length;
+      el.innerHTML =
+        kpi('Units sold', fmtInt(c.totalUnits)) +
+        kpi('Orders', fmtInt(c.orders.length)) +
+        kpi('Sales value', fmtMoney(c.salesValue), 'Excludes delivery fees') +
+        kpi('Best seller', best ? esc(best.name) : '—', best ? `${fmtInt(best.units)} units` : 'No sales in this range') +
+        kpi('Need restocking', fmtInt(needAction), 'Reorder now or out of stock');
+    }
+  }
+
+  function renderTrend(c){
+    const canvas = $('trend-canvas');
+    const msg = $('trend-msg');
+    const noun = GROUP_NOUN[state.group];
+    const pname = state.product ? (nameByKey.get(state.product) || '') : '';
+    let title = `Units sold per ${noun}`;
+    if (pname) title += ` — ${pname}`;
+    if (marketingLabel()) title += ` — via ${marketingLabel()}`;
+    $('trend-title').textContent = title;
+    $('trend-sub').textContent = (state.group === 'week' ? 'Weeks start on Monday. ' : '') +
+      c.start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' to today.';
+
+    if (trendChart){ trendChart.destroy(); trendChart = null; }
+    if (typeof Chart === 'undefined'){
+      canvas.classList.add('hidden'); msg.classList.remove('hidden');
+      msg.textContent = "Charts couldn't load — check your internet connection and refresh. The table below still works.";
+      return;
+    }
+    if (c.tooMany){
+      canvas.classList.add('hidden'); msg.classList.remove('hidden');
+      msg.textContent = 'That would be more than ' + MAX_BUCKETS + ' time slices. Pick a shorter range or a larger grouping (for example Daily instead of Hourly).';
+      return;
+    }
+    canvas.classList.remove('hidden'); msg.classList.add('hidden');
+    trendChart = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: c.buckets.map((b) => bucketLabel(b.start, state.group)),
+        datasets: [{ label: 'Units sold', data: c.buckets.map((b) => b.units), backgroundColor: '#0F766E', borderRadius: 3 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  function renderTop(c){
+    const canvas = $('top-canvas');
+    const msg = $('top-msg');
+    if (topChart){ topChart.destroy(); topChart = null; }
+    const top = c.rows.filter((r) => r.units > 0).slice(0, 10);
+    if (typeof Chart === 'undefined'){
+      canvas.classList.add('hidden'); msg.classList.remove('hidden'); msg.textContent = "Charts couldn't load.";
+      return;
+    }
+    if (top.length === 0){
+      canvas.classList.add('hidden'); msg.classList.remove('hidden'); msg.textContent = 'No sales in this range yet.';
+      return;
+    }
+    canvas.classList.remove('hidden'); msg.classList.add('hidden');
+    topChart = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: top.map((r) => r.name),
+        datasets: [{
+          label: 'Units sold', data: top.map((r) => r.units), borderRadius: 3,
+          backgroundColor: top.map((r) => (r.key === state.product ? '#F2A93B' : '#0F766E'))
+        }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { grid: { display: false } } },
+        onClick: (evt, els) => { if (els.length) selectProduct(top[els[0].index].key); },
+        onHover: (evt, els) => { if (evt.native && evt.native.target) evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; }
+      }
+    });
+  }
+
+  function renderTable(c){
+    $('table-sub').textContent = state.product
+      ? 'Showing every product — click a row to focus, or clear the product filter above.'
+      : 'Sorted by units sold. Click a row to focus the charts on that product.';
+    const body = $('sku-body');
+    if (c.rows.length === 0){
+      body.innerHTML = '<tr><td colspan="10" class="empty">No orders or stock data yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = c.rows.map((r, i) => `
+      <tr data-key="${esc(r.key)}" class="${r.key === state.product ? 'sel' : ''}">
+        <td class="num">${i + 1}</td>
+        <td class="sku">${esc(r.name)}</td>
+        <td class="num"><b>${fmtInt(r.units)}</b></td>
+        <td class="num">${fmt1(r.share)}%</td>
+        <td class="num">${fmtInt(r.orders)}</td>
+        <td class="num">${fmt1(r.rate)}</td>
+        <td class="num">${r.qty !== null ? fmtInt(r.qty) : '—'}</td>
+        <td class="num">${r.cover !== null ? fmt1(r.cover) : '—'}</td>
+        <td class="num">${r.suggested !== null ? (r.suggested > 0 ? '<b>' + fmtInt(r.suggested) + '</b>' : '0') : '—'}</td>
+        <td><span class="badge ${r.status.key}">${esc(r.status.label)}</span></td>
+      </tr>`).join('');
+    body.querySelectorAll('tr[data-key]').forEach((tr) => {
+      tr.addEventListener('click', () => selectProduct(tr.dataset.key === state.product ? '' : tr.dataset.key));
+    });
+  }
+
+  function computeMarketing(orders, lines){
+    const unitsByOrder = new Map();
+    lines.forEach((l) => unitsByOrder.set(l.o, (unitsByOrder.get(l.o) || 0) + l.q));
+    const map = new Map();
+    const get = (key, label, type) => {
+      if (!map.has(key)) map.set(key, { key, label, type, orders: 0, units: 0, value: 0, discount: 0 });
+      return map.get(key);
+    };
+    const organic = { key: '', orders: 0, units: 0, value: 0, discount: 0 };
+    let tagged = 0;
+    orders.forEach((o) => {
+      const units = unitsByOrder.get(o.id) || 0;
+      const value = Math.max(0, (Number(o.total) || 0) - (Number(o.fee) || 0));
+      const disc = Number(o.disc) || 0;
+      const add = (e) => { e.orders += 1; e.units += units; e.value += value; e.discount += disc; };
+      if (o.promo) add(get('promo:' + o.promo, o.promo, 'Promo code'));
+      if (o.src) add(get('src:' + o.src, o.src, 'Campaign link'));
+      if (o.promo || o.src) tagged += 1; else add(organic);
+    });
+    const rows = [...map.values()].sort((a, b) => b.value - a.value || b.orders - a.orders);
+    return { rows, organic, tagged, total: orders.length };
+  }
+
+  function renderMarketing(c){
+    const m = computeMarketing(c.rangeOrders, c.rangeLines);
+    const pct = m.total ? Math.round((m.tagged / m.total) * 100) : 0;
+    $('mkt-sub').textContent = m.total
+      ? `${m.tagged} of ${m.total} orders in this range used a promo code or a tracked link (${pct}%). An order that used both appears in both rows.`
+      : 'No orders in this range.';
+    const share = (n) => (m.total ? fmt1((n / m.total) * 100) + '%' : '—');
+    const tr = (r, label, type, clickable) => {
+      const cls = !clickable ? 'static' : (r.key === state.marketing ? 'sel' : '');
+      return `<tr class="${cls}" ${clickable ? `data-key="${esc(r.key)}"` : ''}>
+        <td class="sku">${esc(label)}</td><td>${esc(type)}</td>
+        <td class="num">${fmtInt(r.orders)}</td><td class="num">${fmtInt(r.units)}</td>
+        <td class="num">${fmtMoney(r.value)}</td>
+        <td class="num">${r.discount ? fmtMoney(r.discount) : '—'}</td>
+        <td class="num">${r.orders ? fmtMoney(r.value / r.orders) : '—'}</td>
+        <td class="num">${share(r.orders)}</td></tr>`;
+    };
+    let html = '';
+    if (m.rows.length === 0){
+      html += '<tr class="static"><td colspan="8" class="empty">No promo-code or tracked-link orders in this range yet. Add ?src=name to a store link to start tracking a campaign (see the note below).</td></tr>';
+    } else {
+      html += m.rows.map((r) => tr(r, r.label, r.type, true)).join('');
+    }
+    html += tr(m.organic, 'No marketing tool', 'Direct / organic', false);
+    $('mkt-body').innerHTML = html;
+    $('mkt-body').querySelectorAll('tr[data-key]').forEach((row) => {
+      row.addEventListener('click', () => selectMarketing(row.dataset.key === state.marketing ? '' : row.dataset.key));
+    });
+  }
+
+  function renderFilterNote(){
+    const note = $('filter-note');
+    const ml = marketingLabel();
+    if (!ml){ note.classList.add('hidden'); note.innerHTML = ''; return; }
+    note.innerHTML = `Showing only sales from: <b>${esc(ml)}</b> <button type="button" id="clear-marketing">Clear</button>`;
+    note.classList.remove('hidden');
+    $('clear-marketing').addEventListener('click', () => selectMarketing(''));
+  }
+
+  function selectMarketing(key){
+    state.marketing = key || '';
+    $('marketing-select').value = state.marketing;
+    render();
+  }
+
+  function render(){
+    lastComputed = compute();
+    renderFilterNote();
+    renderMarketing(lastComputed);
+    renderKpis(lastComputed);
+    renderTrend(lastComputed);
+    renderTop(lastComputed);
+    renderTable(lastComputed);
+    $('updated-label').textContent = lastUpdated ? 'Updated ' + lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+  }
+
+  function selectProduct(key){
+    state.product = key || '';
+    $('product-select').value = state.product;
+    render();
+  }
+
+  // ---------- controls ----------
+  document.querySelectorAll('#group-seg button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.group = btn.dataset.group;
+      state.range = DEFAULT_RANGE[state.group];
+      document.querySelectorAll('#group-seg button').forEach((b) => b.classList.toggle('active', b === btn));
+      $('range-select').value = state.range;
+      render();
+    });
+  });
+  $('range-select').addEventListener('change', (e) => { state.range = e.target.value; render(); });
+  $('product-select').addEventListener('change', (e) => selectProduct(e.target.value));
+  $('marketing-select').addEventListener('change', (e) => selectMarketing(e.target.value));
+  $('lead-input').addEventListener('input', (e) => { const v = Number(e.target.value); state.leadDays = isNaN(v) || v < 0 ? 0 : v; render(); });
+  $('cover-input').addEventListener('input', (e) => { const v = Number(e.target.value); state.coverDays = isNaN(v) || v < 1 ? 1 : v; render(); });
+
+  $('export-btn').addEventListener('click', () => {
+    if (!lastComputed) return;
+    const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+    const header = ['Product', 'Units sold', 'Share %', 'Orders', 'Avg per day (all sales)', 'In stock', 'Days of cover', 'Suggested order', 'Status'];
+    const lines = lastComputed.rows.map((r) => [
+      q(r.name), r.units, r.share.toFixed(1), r.orders, r.rate.toFixed(2),
+      r.qty !== null ? r.qty : '', r.cover !== null ? r.cover.toFixed(1) : '',
+      r.suggested !== null ? r.suggested : '', q(r.status.label)
+    ].join(','));
+    const csv = [header.join(',')].concat(lines).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'restock-guide-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  // ---------- login / refresh ----------
+  function showApp(){
+    $('login-screen').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    populateProducts();
+    populateMarketing();
+    render();
+  }
+
+  function tryLogin(){
+    const key = $('key-input').value.trim();
+    if (!key){ $('key-error').textContent = 'Please enter your dashboard key.'; return; }
+    if (SHEET_WEBHOOK_URL.includes('PASTE_YOUR')){ $('key-error').textContent = 'Not connected yet — set SHEET_WEBHOOK_URL in this file.'; return; }
+    dashboardKey = key;
+    $('key-error').textContent = '';
+    $('key-submit').disabled = true;
+    $('key-submit').textContent = 'Loading…';
+    loadData().then(showApp).catch((err) => {
+      dashboardKey = '';
+      $('key-error').textContent = err.message || 'Could not load the dashboard.';
+    }).finally(() => {
+      $('key-submit').disabled = false;
+      $('key-submit').textContent = 'Open dashboard';
+    });
+  }
+  $('key-submit').addEventListener('click', tryLogin);
+  $('key-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(); });
+
+  $('refresh-btn').addEventListener('click', () => {
+    const btn = $('refresh-btn');
+    btn.disabled = true; btn.textContent = 'Refreshing…';
+    loadData().then(() => { populateProducts(); populateMarketing(); render(); })
+      .catch((err) => alert('Could not refresh: ' + (err.message || err)))
+      .finally(() => { btn.disabled = false; btn.textContent = '🔄 Refresh'; });
+  });
+
+  $('logout-btn').addEventListener('click', () => {
+    dashboardKey = '';
+    DATA = { orders: [], lines: [], stock: [] };
+    lastComputed = null;
+    if (trendChart){ trendChart.destroy(); trendChart = null; }
+    if (topChart){ topChart.destroy(); topChart = null; }
+    $('app').classList.add('hidden');
+    $('login-screen').classList.remove('hidden');
+    $('key-input').value = '';
+  });
+</script>
+
+</body>
+</html>
