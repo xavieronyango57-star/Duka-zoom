@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duka Zoom Back Office</title>
+<style>
+:root{--g:#167A4B;--gd:#0B3D26;--bg:#F2F6F1;--ink:#14231B;--soft:#5B6B60;--line:#DCE5D9;--err:#B3261E;--warn:#B45309}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit}.hide{display:none!important}
+.btn{background:var(--g);color:#fff;border:0;border-radius:9px;padding:9px 14px;font-weight:700;cursor:pointer}.btn.alt{background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:600}.btn:disabled{opacity:.5}
+input,select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;width:100%}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+header{background:var(--gd);color:#fff;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}header b{font-size:17px}.grow{flex:1}
+.tabs{display:flex;gap:6px;padding:12px 16px 0;flex-wrap:wrap}.tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:600}.tab.on{background:var(--g);color:#fff;border-color:var(--g)}
+main{padding:12px 16px;max-width:1100px;margin:0 auto}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:560px}th,td{text-align:left;padding:7px;border-bottom:1px solid var(--line)}th{font-size:12px;color:var(--soft)}.num{text-align:right}
+td input{width:90px}.soft{color:var(--soft);font-size:13px}.err{color:var(--err);font-size:13px;margin-top:6px}.ok{color:var(--g);font-weight:700}.bad{color:var(--err);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.kv{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--line)}
+label{display:block;font-weight:600;font-size:12.5px;margin:8px 0 3px}.row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+#login{max-width:340px;margin:14vh auto}
+</style>
+</head>
+<body>
+<div id="login" class="card"><h2 style="margin:0 0 4px">Back Office</h2><p class="soft" style="margin:0 0 10px">Owner or cashier PIN. Not saved.</p>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN"><button class="btn" id="go" style="width:100%;margin-top:10px">Log in</button><div class="err" id="lerr"></div></div>
+
+<div id="app" class="hide">
+  <header><b>🗂️ Duka Zoom Back Office</b><span id="who" style="color:#cfe6d8"></span><span class="grow"></span><button class="btn alt" id="logout">Log out</button></header>
+  <div class="tabs" id="tabs"></div>
+  <main>
+    <section id="p-stock" class="hide">
+      <div class="card"><div class="row"><div style="flex:2"><label>Search</label><input id="sq" placeholder="Find a product"></div><div><button class="btn" id="sapply" style="width:100%">Apply counts</button></div></div>
+        <div class="soft" style="margin-top:6px" id="ssum">Enter the number you counted. Only products you change are adjusted.</div><div class="err" id="serr"></div></div>
+      <div class="card tw"><table><thead><tr><th>Product</th><th class="num">System</th><th>Counted</th><th class="num">Difference</th><th>Reason</th></tr></thead><tbody id="stb"></tbody></table></div>
+    </section>
+
+    <section id="p-close" class="hide">
+      <div class="card"><div class="row"><div><label>Date</label><input id="cd" type="date"></div><div><button class="btn alt" id="cload" style="width:100%">Load</button></div></div><div id="cinfo" class="soft" style="margin-top:6px"></div></div>
+      <div class="grid" id="cnum"></div>
+      <div class="card"><div class="grid"><div><label>Opening float (KSh)</label><input id="cf" type="number" min="0" value="0"></div><div><label>Cash paid out (KSh)</label><input id="cp" type="number" min="0" value="0"></div>
+        <div><label>Cash counted in till</label><input id="cc" type="number" min="0"></div><div><label>M-Pesa received (counter)</label><input id="cm" type="number" min="0"></div></div>
+        <label>Notes</label><textarea id="cn" rows="2" maxlength="300"></textarea>
+        <div class="kv"><span>Expected cash in till</span><b id="cexp">—</b></div><div class="kv"><span>Cash difference</span><b id="cvar">—</b></div><div class="kv"><span>M-Pesa difference</span><b id="cmv">—</b></div>
+        <button class="btn" id="csave" style="margin-top:10px">Close the day</button><div class="err" id="cerr"></div></div>
+    </section>
+
+    <section id="p-reorder" class="hide">
+      <div class="card"><div class="row"><div><label>Supplier delivery time (days)</label><input id="rl" type="number" min="1" max="30" value="3"></div><div><label>Stock to hold (days of sales)</label><input id="rt" type="number" min="1" max="90" value="14"></div>
+        <div><button class="btn" id="rgo" style="width:100%">Build list</button></div></div>
+        <label style="display:inline-flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="rall" style="width:auto"> Show products that do not need ordering yet</label><div class="err" id="rerr"></div></div>
+      <div id="rout"></div>
+    </section>
+
+    <section id="p-offers" class="hide">
+      <div class="card"><div class="soft" style="margin-bottom:8px">Loyalty: customers earn 1 point per KSh 100 spent on completed orders. At the counter, 1 point takes KSh 1 off the bill.</div>
+        <div class="row"><div><label>Customer group</label><select id="oseg"></select></div></div>
+        <label>Message (use {name} and {points})</label><textarea id="omsg" rows="4"></textarea><div class="soft">Check any offer you mention is one you will honour.</div></div>
+      <div class="card tw"><table><thead><tr><th>Customer</th><th>Phone</th><th class="num">Orders</th><th class="num">Days since</th><th class="num">Points</th><th></th></tr></thead><tbody id="otb"></tbody></table><div class="soft" id="ocount" style="margin-top:6px"></div></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  var API='https://script.google.com/macros/s/AKfycbw-OaVKDCtDG2TpuR873_XCwWtR86qjDQV9lfmwxMRjatBCPj_jgj-HMQi93vCoTxf9/exec';
+  var token=null,role='',who='',stock=[],counts={},reasons={},reasonList=[],off=null,offCust=[],sent={},closeNums=null;
+  var $=function(i){return document.getElementById(i)};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var ksh=function(n){return (n<0?'−':'')+'KSh '+Math.round(Math.abs(Number(n)||0)).toLocaleString('en-US')};
+  function api(p){return new Promise(function(res,rej){var cb='cb'+Date.now()+Math.floor(Math.random()*1e6),s=document.createElement('script');
+    var t=setTimeout(function(){done();rej(new Error('No answer from the server. Try again.'))},25000);
+    function done(){clearTimeout(t);delete window[cb];s.remove()}
+    window[cb]=function(d){done();res(d)};s.onerror=function(){done();rej(new Error('Network problem.'))};
+    s.src=API+'?'+new URLSearchParams(Object.assign({},p,{callback:cb})).toString();document.head.appendChild(s)})}
+  function call(a,p){return api(Object.assign({action:a,token:token},p||{})).then(function(d){if(d.status!=='ok'){if(d.code==='auth'||d.code==='forbidden')out(d.message);throw new Error(d.message||'Failed')}return d})}
+
+  var TABS=[['stock','Stock count',true],['close','Daily close',false],['reorder','Reorder list',true],['offers','Loyalty offers',true]];
+  function show(k){TABS.forEach(function(t){$('p-'+t[0]).classList.toggle('hide',t[0]!==k)});$('tabs').querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on',b.dataset.k===k)});
+    if(k==='stock'&&!stock.length)loadStock();if(k==='close')loadClose();if(k==='offers'&&!off)loadOffers()}
+  function buildTabs(){var list=TABS.filter(function(t){return role==='owner'||!t[2]});
+    $('tabs').innerHTML=list.map(function(t){return '<button class="tab" data-k="'+t[0]+'">'+t[1]+'</button>'}).join('');
+    $('tabs').querySelectorAll('.tab').forEach(function(b){b.onclick=function(){show(b.dataset.k)}});show(list[0][0])}
+
+  /* ---- stock count ---- */
+  function loadStock(){call('boStockList').then(function(d){stock=d.products;reasonList=d.reasons;counts={};reasons={};drawStock()}).catch(function(e){$('serr').textContent=e.message})}
+  function drawStock(){var q=$('sq').value.trim().toLowerCase();
+    var rows=stock.filter(function(p){return !q||p.name.toLowerCase().indexOf(q)>-1}).slice(0,400);
+    $('stb').innerHTML=rows.map(function(p,i){var k=p.name,c=counts[k];var diff=(c==null)?'':c-(p.qty||0);
+      return '<tr><td>'+esc(p.name)+'</td><td class="num">'+(p.qty==null?'—':p.qty)+'</td><td><input type="number" min="0" data-n="'+esc(k)+'" value="'+(c==null?'':c)+'"></td><td class="num" data-d="'+esc(k)+'">'+(diff===''?'':(diff>0?'+':'')+diff)+'</td>'+
+      '<td><select data-r="'+esc(k)+'">'+reasonList.map(function(r){return '<option'+((reasons[k]||'Count correction')===r?' selected':'')+'>'+r+'</option>'}).join('')+'</select></td></tr>'}).join('');
+    $('stb').querySelectorAll('input').forEach(function(i){i.oninput=function(){var p=stock.filter(function(x){return x.name===i.dataset.n})[0];
+      if(i.value==='')delete counts[i.dataset.n];else counts[i.dataset.n]=Math.max(0,Math.floor(Number(i.value)));
+      var c=counts[i.dataset.n],cell=$('stb').querySelector('[data-d="'+i.dataset.n.replace(/"/g,'\\"')+'"]');if(cell)cell.textContent=c==null?'':((c-(p.qty||0))>0?'+':'')+(c-(p.qty||0));sum()}});
+    $('stb').querySelectorAll('select').forEach(function(s){s.onchange=function(){reasons[s.dataset.r]=s.value}});sum()}
+  function changed(){return stock.filter(function(p){return counts[p.name]!=null&&counts[p.name]!==(p.qty||0)})}
+  function sum(){var ch=changed(),val=ch.reduce(function(a,p){return a+(counts[p.name]-(p.qty||0))*p.cost},0);
+    $('ssum').textContent=ch.length?ch.length+' product(s) differ from the system. Value difference at cost: '+ksh(val)+'.':'Enter the number you counted. Only products you change are adjusted.'}
+  $('sq').oninput=drawStock;
+  $('sapply').onclick=function(){var ch=changed();if(!ch.length){$('serr').textContent='Nothing to apply.';return}
+    if(!confirm('Apply '+ch.length+' stock adjustment(s)? This changes your stock quantities.'))return;
+    $('sapply').disabled=true;$('serr').textContent='';var items=ch.map(function(p){return{name:p.name,counted:counts[p.name],expected:p.qty,reason:reasons[p.name]||'Count correction'}});
+    var applied=0,skipped=[],i=0;
+    (function next(){if(i>=items.length){$('sapply').disabled=false;$('serr').innerHTML=(applied?'<span class="ok">'+applied+' adjusted.</span> ':'')+(skipped.length?'<span class="bad">Skipped: '+skipped.map(function(s){return esc(s.name+' ('+s.why+')')}).join('; ')+'</span>':'');loadStock();return}
+      var batch=items.slice(i,i+20);i+=20;
+      call('boStockAdjust',{items:JSON.stringify(batch)}).then(function(d){applied+=d.applied.length;skipped=skipped.concat(d.skipped);next()}).catch(function(e){$('sapply').disabled=false;$('serr').textContent=e.message+' Already applied: '+applied+'.'})})()};
+
+  /* ---- daily close ---- */
+  var todayStr=function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+  $('cd').value=todayStr();$('cload').onclick=loadClose;
+  function loadClose(){$('cerr').textContent='';call('boCloseSummary',{date:$('cd').value}).then(function(d){closeNums=d.numbers;var n=d.numbers;
+    $('cnum').innerHTML=[['Counter sales',ksh(n.counterTotal)+' ('+n.counterCount+')'],['Counter cash sales',ksh(n.cashSales)],['Counter M-Pesa',ksh(n.mpesa)],['All channels goods sales',ksh(n.allGoods)],['Expenses logged',ksh(n.expenses)]].map(function(r){return '<div class="card" style="margin:0"><div class="soft">'+r[0]+'</div><b style="font-size:18px">'+r[1]+'</b></div>'}).join('');
+    var e=d.existing;$('cinfo').innerHTML=e?'<span class="bad">Already closed by '+esc(e.by)+'. Cash difference was '+ksh(e.variance)+'.</span>'+(d.role==='owner'?' You can save again to replace it.':''):'Not closed yet.';
+    if(e){$('cf').value=e.float;$('cp').value=e.paidOut;$('cc').value=e.counted;$('cm').value=e.mpesaCounted;$('cn').value=e.notes||''}
+    calc()}).catch(function(e){$('cerr').textContent=e.message})}
+  function calc(){if(!closeNums)return;var f=Number($('cf').value)||0,p=Number($('cp').value)||0,exp=f+closeNums.cashSales-p;$('cexp').textContent=ksh(exp);
+    if($('cc').value!==''){var v=Number($('cc').value)-exp;$('cvar').textContent=ksh(v);$('cvar').className=v===0?'ok':'bad'}else{$('cvar').textContent='—';$('cvar').className=''}
+    if($('cm').value!==''){var m=Number($('cm').value)-closeNums.mpesa;$('cmv').textContent=ksh(m);$('cmv').className=m===0?'ok':'bad'}else{$('cmv').textContent='—';$('cmv').className=''}}
+  ['cf','cp','cc','cm'].forEach(function(i){$(i).oninput=calc});
+  $('csave').onclick=function(){if($('cc').value===''||$('cm').value===''){$('cerr').textContent='Enter the cash counted and the M-Pesa received (0 if none).';return}
+    if(!confirm('Close '+$('cd').value+'? Check the figures first.'))return;$('csave').disabled=true;
+    call('boCloseSave',{date:$('cd').value,float:$('cf').value,paidOut:$('cp').value,counted:$('cc').value,mpesaCounted:$('cm').value,notes:$('cn').value}).then(function(d){
+      $('cerr').innerHTML='<span class="ok">Day closed. Cash difference '+ksh(d.cashVariance)+', M-Pesa difference '+ksh(d.mpesaVariance)+'.</span>';loadClose()})
+    .catch(function(e){$('cerr').textContent=e.message}).then(function(){$('csave').disabled=false})};
+
+  /* ---- reorder ---- */
+  var ritems=[];
+  $('rgo').onclick=function(){$('rerr').textContent='';call('boReorder',{lead:$('rl').value,target:$('rt').value}).then(function(d){ritems=d.items;drawReorder()}).catch(function(e){$('rerr').textContent=e.message})};
+  $('rall').onchange=function(){drawReorder()};
+  function drawReorder(){var all=$('rall').checked,list=ritems.filter(function(i){return all||i.needs});
+    if(!list.length){$('rout').innerHTML='<div class="card soft">Nothing needs ordering right now.</div>';return}
+    var by={};list.forEach(function(i){var s=i.supplier||'No supplier set';(by[s]=by[s]||[]).push(i)});
+    $('rout').innerHTML=Object.keys(by).map(function(s,si){var rows=by[s];
+      return '<div class="card tw"><div class="row" style="align-items:center"><b style="flex:3">'+esc(s)+'</b><div><button class="btn alt" data-s="'+esc(s)+'">Copy order message</button></div></div>'+
+      '<table><thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Sold (30d)</th><th class="num">Days of cover</th><th>Order qty</th><th class="num">Est. cost</th></tr></thead><tbody>'+
+      rows.map(function(i){return '<tr><td>'+esc(i.name)+(i.needs?'':' <span class="soft">(ok)</span>')+'</td><td class="num">'+i.qty+'</td><td class="num">'+i.sold+'</td><td class="num '+(i.needs?'bad':'')+'">'+i.cover+'</td><td><input type="number" min="0" data-q="'+esc(i.name)+'" value="'+i.suggest+'"></td><td class="num">'+(i.cost?ksh(i.suggest*i.cost):'—')+'</td></tr>'}).join('')+'</tbody></table></div>'}).join('');
+    $('rout').querySelectorAll('input').forEach(function(i){i.oninput=function(){var it=ritems.filter(function(x){return x.name===i.dataset.q})[0];it.suggest=Math.max(0,Math.floor(Number(i.value)||0))}});
+    $('rout').querySelectorAll('[data-s]').forEach(function(b){b.onclick=function(){var s=b.dataset.s,rows=(s==='No supplier set'?list.filter(function(i){return !i.supplier}):list.filter(function(i){return i.supplier===s})).filter(function(i){return i.suggest>0});
+      var t='Hello, Duka Zoom would like to order:\n'+rows.map(function(i){return '- '+i.suggest+' x '+i.name}).join('\n')+'\nPlease confirm availability and price. Thank you.';
+      if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){b.textContent='Copied ✓'});window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener')}})}
+
+  /* ---- loyalty offers ---- */
+  var TPL={regulars:'Hello {name}, thank you for being a regular at Duka Zoom! You have {points} loyalty points (worth KSh {points}) to use on your next visit. Call or WhatsApp 0706 481 366.',
+    repeat:'Hello {name}, thank you for shopping with Duka Zoom again! You have {points} loyalty points (worth KSh {points}) to use on your next visit.',
+    new:'Hello {name}, welcome to Duka Zoom and thank you for your first order! You now have {points} loyalty points (worth KSh {points}) to use next time.',
+    quiet:'Hello {name}, we would love to see you again at Duka Zoom. You have {points} loyalty points (worth KSh {points}) waiting. Call or WhatsApp 0706 481 366.',
+    lapsed:'Hello {name}, we miss you at Duka Zoom! You have {points} loyalty points (worth KSh {points}) to use on your next order. Call or WhatsApp 0706 481 366.'};
+  function loadOffers(){call('boOffers').then(function(d){off=d;offCust=d.customers;
+    $('oseg').innerHTML=d.segments.map(function(s){return '<option value="'+s.id+'">'+esc(s.label)+' ('+offCust.filter(function(c){return c.seg===s.id}).length+')</option>'}).join('');
+    $('oseg').value=$('oseg').value||'lapsed';$('omsg').value=TPL[$('oseg').value]||'';drawOffers()}).catch(function(e){$('ocount').textContent=e.message})}
+  $('oseg').onchange=function(){$('omsg').value=TPL[$('oseg').value]||'';drawOffers()};
+  function wa(phone){var d=String(phone).replace(/\D/g,'');if(d.charAt(0)==='0')d='254'+d.slice(1);else if(d.length===9)d='254'+d;return d}
+  function drawOffers(){var seg=$('oseg').value,list=offCust.filter(function(c){return c.seg===seg});
+    $('ocount').textContent=list.length+' customer(s) in this group. WhatsApp opens one message at a time; press Send in WhatsApp.';
+    $('otb').innerHTML=list.map(function(c,i){return '<tr><td>'+esc(c.name||'—')+'</td><td>'+esc(c.phone)+'</td><td class="num">'+c.orders+'</td><td class="num">'+c.days+'</td><td class="num">'+c.points+'</td><td><button class="btn alt" data-i="'+i+'">'+(sent[c.phone]?'Sent ✓':'WhatsApp')+'</button></td></tr>'}).join('');
+    $('otb').querySelectorAll('button').forEach(function(b){b.onclick=function(){var c=list[+b.dataset.i];var t=$('omsg').value.replace(/\{name\}/g,(c.name||'there').split(' ')[0]).replace(/\{points\}/g,c.points);
+      window.open('https://wa.me/'+wa(c.phone)+'?text='+encodeURIComponent(t),'_blank','noopener');sent[c.phone]=1;b.textContent='Sent ✓'}})}
+
+  function out(m){token=null;$('app').classList.add('hide');$('login').classList.remove('hide');$('pin').value='';$('lerr').textContent=m||''}
+  $('go').onclick=function(){$('lerr').textContent='';var pin=$('pin').value.trim();if(!pin){$('lerr').textContent='Enter your PIN.';return}$('go').disabled=true;
+    api({action:'posLogin',pin:pin}).then(function(d){if(d.status!=='ok')throw new Error(d.message||'Login failed.');token=d.token;role=d.role;who=d.name;
+      $('who').textContent='· '+who+' ('+role+')';$('login').classList.add('hide');$('app').classList.remove('hide');stock=[];off=null;buildTabs()})
+    .catch(function(e){$('lerr').textContent=e.message}).then(function(){$('go').disabled=false})};
+  $('pin').onkeydown=function(e){if(e.key==='Enter')$('go').click()};
+  $('logout').onclick=function(){api({action:'staffLogout',token:token}).catch(function(){});out('')};
+})();
+</script>
+</body>
+</html>
